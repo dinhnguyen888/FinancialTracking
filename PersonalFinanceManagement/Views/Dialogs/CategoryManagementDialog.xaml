@@ -1,0 +1,121 @@
+<Window x:Class="PersonalFinanceManagement.Views.Dialogs.CategoryManagementDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PersonalFinanceManagement.Views.Dialogs"
+        mc:Ignorable="d"
+        Title="Quản lý Danh mục"
+        Height="500" Width="700"
+        WindowStartupLocation="CenterOwner"
+        Style="{StaticResource WindowStyle}">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+       <TextBlock Text="Danh Mục"
+                 FontSize="24"
+                 FontWeight="Light"
+                 Margin="0,0,0,20"/>
+
+       <!-- Filter -->
+       <DockPanel Grid.Row="1"
+                  LastChildFill="False"
+                  Margin="0,0,0,15">
+           <StackPanel DockPanel.Dock="Left"
+                      Orientation="Horizontal">
+               <TextBlock Text="Loại:"
+                         VerticalAlignment="Center"
+                         Foreground="#666"
+                         Margin="0,0,10,0"/>
+               <ComboBox ItemsSource="{Binding CategoryTypes}"
+                         SelectedItem="{Binding SelectedTypeFilter}"
+                         Width="150"
+                         Height="30"
+                         Style="{StaticResource DefaultComboBox}"/>
+           </StackPanel>
+       </DockPanel>
+
+        <!-- Categories List -->
+        <DataGrid Grid.Row="2"
+                  Style="{StaticResource DefaultDataGrid}"
+                  ItemsSource="{Binding Categories}"
+                  SelectedItem="{Binding SelectedCategory}"
+                  Margin="0,0,0,20"
+                  MinRowHeight="35"
+                  BorderThickness="0"
+                  Background="Transparent"
+                  HorizontalGridLinesBrush="#eee">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Tên"
+                                   Binding="{Binding Name}"
+                                   Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Loại"
+                                   Binding="{Binding Type}"
+                                   Width="100"/>
+                <DataGridTextColumn Header="Mô tả"
+                                   Binding="{Binding Description}"
+                                   Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="2">
+                                <Button Content="Sửa"
+                                        Command="{Binding DataContext.EditCategoryCommand,
+                                                   RelativeSource={RelativeSource AncestorType=Window}}"
+                                        Style="{StaticResource DefaultButton}"
+                                        Background="#2196F3"
+                                        Margin="0,0,5,0"
+                                        Width="45"
+                                        Height="25"/>
+                                <Button Content="Xóa"
+                                        Command="{Binding DataContext.DeleteCategoryCommand,
+                                                   RelativeSource={RelativeSource AncestorType=Window}}"
+                                        Style="{StaticResource DefaultButton}"
+                                        Background="#e74c3c"
+                                        Width="45"
+                                        Height="25"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="Thêm danh mục"
+                    Command="{Binding AddCategoryCommand}"
+                    Style="{StaticResource DefaultButton}"
+                    Width="120"
+                    Height="35"
+                    Margin="0,0,10,0"/>
+            <Button Content="Đóng"
+                    Command="{Binding CloseCommand}"
+                    Style="{StaticResource DefaultButton}"
+                    Width="80"
+                    Height="35"
+                    Background="Gray"/>
+        </StackPanel>
+    </Grid>
+</Window>

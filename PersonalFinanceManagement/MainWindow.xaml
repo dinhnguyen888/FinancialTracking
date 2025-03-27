@@ -1,0 +1,126 @@
+﻿<Window
+    x:Class="PersonalFinanceManagement.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:PersonalFinanceManagement"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:PersonalFinanceManagement.ViewModels"
+    xmlns:views="clr-namespace:PersonalFinanceManagement.Views"
+    Title="Quản Lý Tài Chính Cá Nhân"
+    Width="1000"
+    Height="650"
+    Style="{StaticResource WindowStyle}"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+
+    <Window.Resources>
+        <!--  ViewModel to View mappings  -->
+        <DataTemplate DataType="{x:Type viewmodels:IncomeViewModel}">
+            <views:IncomeView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:ExpenseViewModel}">
+            <views:ExpenseView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodels:ReportViewModel}">
+            <views:ReportView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  Sidebar  -->
+        <Border
+            Grid.Column="0"
+            Background="{StaticResource PrimaryBrush}"
+            Effect="{Binding ElementName=mainContent, Path=(Effect)}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!--  Header  -->
+                <StackPanel Grid.Row="0" Margin="0,20,0,30">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="24"
+                        Foreground="White"
+                        Text="Quản Lý Tài Chính"
+                        FontWeight="Light"/>
+                </StackPanel>
+
+                <!--  Navigation Buttons  -->
+                <StackPanel Grid.Row="1" Margin="10,0">
+                    <Button Command="{Binding NavigateIncomeCommand}"
+                            Style="{StaticResource NavButton}"
+                            Height="40"
+                            Margin="0,0,0,10">
+                        <TextBlock Text="Thu Nhập" />
+                    </Button>
+
+                    <Button Command="{Binding NavigateExpenseCommand}"
+                            Style="{StaticResource NavButton}"
+                            Height="40"
+                            Margin="0,0,0,10">
+                        <TextBlock Text="Chi Tiêu" />
+                    </Button>
+
+                    <Button Command="{Binding NavigateReportCommand}"
+                            Style="{StaticResource NavButton}"
+                            Height="40"
+                            Margin="0,0,0,10">
+                        <TextBlock Text="Báo Cáo" />
+                    </Button>
+
+                    <Button Command="{Binding ManageCategoriesCommand}"
+                            Style="{StaticResource NavButton}"
+                            Height="40"
+                            Margin="0,0,0,10">
+                        <TextBlock Text="Danh Mục" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  Main Content Area  -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!--  Header with Current Balance  -->
+            <Border Grid.Row="0" Background="{StaticResource SecondaryBrush}">
+                <StackPanel
+                    Margin="20,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="18"
+                        Foreground="White"
+                        Text="Số Dư Hiện Tại: " />
+                    <TextBlock
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="20"
+                        FontWeight="Bold"
+                        Foreground="White"
+                        Text="{Binding CurrentBalance, StringFormat={}{0:N0} VNĐ}" />
+                </StackPanel>
+            </Border>
+
+            <!--  Main Content  -->
+            <ContentControl
+                Grid.Row="1"
+                Margin="20"
+                Content="{Binding CurrentViewModel}" />
+        </Grid>
+    </Grid>
+</Window>

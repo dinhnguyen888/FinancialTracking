@@ -1,0 +1,151 @@
+<Window x:Class="PersonalFinanceManagement.Views.Dialogs.TransactionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PersonalFinanceManagement.Views.Dialogs"
+        mc:Ignorable="d"
+        Title="{Binding DialogTitle}"
+        Height="500" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <Window.Resources>
+        <!-- Base style for text input controls -->
+        <Style x:Key="InputBaseStyle" TargetType="Control">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+
+        <!-- TextBox Style -->
+        <Style x:Key="DialogTextBox" TargetType="TextBox" BasedOn="{StaticResource InputBaseStyle}">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#ccc"/>
+            <Style.Triggers>
+                <Trigger Property="Validation.HasError" Value="True">
+                    <Setter Property="ToolTip" 
+                            Value="{Binding RelativeSource={RelativeSource Self}, 
+                                   Path=(Validation.Errors)[0].ErrorContent}"/>
+                    <Setter Property="BorderBrush" Value="Red"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ComboBox Style -->
+        <Style x:Key="DialogComboBox" TargetType="ComboBox" BasedOn="{StaticResource InputBaseStyle}">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#ccc"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Text="{Binding DialogTitle}"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 Margin="0,0,0,20"/>
+
+        <!-- Form -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,0,20">
+                <!-- Amount -->
+                <TextBlock Text="Số tiền *" Margin="0,0,0,5"/>
+                <TextBox Style="{StaticResource DialogTextBox}"
+                         Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged,
+                                StringFormat={}{0:N0}, ValidatesOnDataErrors=True}"/>
+                <TextBlock Text="(VNĐ)"
+                          Margin="0,-12,0,15"
+                          Foreground="#666666"
+                          FontSize="12"/>
+
+                <!-- Date -->
+                <TextBlock Text="Ngày *" Margin="0,0,0,5"/>
+                <DatePicker SelectedDate="{Binding Date}"
+                          Height="30"
+                          Margin="0,0,0,15"/>
+
+                <!-- Category -->
+                <TextBlock Text="Danh mục *" Margin="0,0,0,5"/>
+                <ComboBox Style="{StaticResource DialogComboBox}"
+                         ItemsSource="{Binding Categories}"
+                         SelectedItem="{Binding SelectedCategory,
+                                      ValidatesOnDataErrors=True}"
+                         DisplayMemberPath="Name"/>
+
+                <!-- Income specific fields -->
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsIncome}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="Nguồn thu" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource DialogTextBox}"
+                             Text="{Binding Source}"/>
+                </StackPanel>
+
+                <!-- Expense specific fields -->
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsExpense}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <CheckBox Content="Chi phí thiết yếu"
+                             IsChecked="{Binding IsEssential}"
+                             Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Phương thức thanh toán" Margin="0,0,0,5"/>
+                    <ComboBox Style="{StaticResource DialogComboBox}"
+                             ItemsSource="{Binding PaymentMethods}"
+                             SelectedItem="{Binding SelectedPaymentMethod}"/>
+                </StackPanel>
+
+                <!-- Description -->
+                <TextBlock Text="Ghi chú" Margin="0,0,0,5"/>
+                <TextBox Style="{StaticResource DialogTextBox}"
+                         Text="{Binding Description}"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         Height="60"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,10,0,0">
+            <Button Content="Lưu"
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource DefaultButton}"
+                    Width="100"
+                    Height="35"
+                    Margin="0,0,10,0"/>
+            <Button Content="Hủy"
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource DefaultButton}"
+                    Width="100"
+                    Height="35"
+                    Background="Gray"/>
+        </StackPanel>
+    </Grid>
+</Window>
