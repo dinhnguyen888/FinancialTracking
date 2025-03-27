@@ -74,6 +74,8 @@ dotnet build
 dotnet run
 ```
 
+2. Hoặc đi đến đường link sau để cài file exe: [**Tải xuống tại đây**](https://github.com/dinhnguyen888/PersonalFinanceManagement/releases/tag/v1.0.0)
+
 ## Cấu Trúc Dự Án
 
 -   `Models/` - Các model dữ liệu
