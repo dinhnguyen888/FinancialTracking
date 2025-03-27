@@ -37,7 +37,7 @@ namespace PersonalFinanceManagement.ViewModels
             ManageCategoriesCommand = new RelayCommand(_ => ShowCategoryManagementDialog());
 
             // Load initial view and balance
-            NavigateTo("Income");
+            NavigateTo("Report");
             UpdateBalanceAsync();
         }
 

@@ -42,5 +42,7 @@ namespace PersonalFinanceManagement
             // Set DataContext to MainViewModel
             DataContext = serviceProvider.GetRequiredService<MainViewModel>();
         }
+
+
     }
 }
