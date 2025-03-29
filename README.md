@@ -1,6 +1,6 @@
-# Ứng Dụng Quản Lý Tài Chính Cá Nhân
+# MoneyOwl - Ứng Dụng Quản Lý Tài Chính Cá Nhân
 
-Ứng dụng desktop hiện đại giúp quản lý tài chính cá nhân được xây dựng bằng WPF, SQLite và Dapper, theo mô hình thiết kế MVVM.
+Ứng dụng desktop giúp quản lý tài chính cá nhân được xây dựng bằng WPF, SQLite và Dapper, theo mô hình thiết kế MVVM.
 
 ## Tổng Quan
 
