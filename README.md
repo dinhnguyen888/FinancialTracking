@@ -4,7 +4,7 @@
 
 ## Tổng Quan
 
-Ứng dụng này giúp người dùng quản lý tài chính cá nhân bằng cách theo dõi thu nhập, chi tiêu và cung cấp báo cáo tài chính chi tiết kèm biểu đồ trực quan. Giao diện hiện đại, hỗ trợ chế độ tối và các công cụ quản lý tài chính toàn diện.
+Ứng dụng này giúp người dùng quản lý tài chính cá nhân bằng cách theo dõi thu nhập, chi tiêu và cung cấp báo cáo tài chính chi tiết kèm biểu đồ trực quan. Giao diện hiện đại và cung cấp các công cụ quản lý tài chính toàn diện.
 
 ## Công Nghệ Sử Dụng
 
@@ -37,7 +37,7 @@
 
 -   Tự động tính toán số dư dựa trên thu nhập và chi tiêu
 -   Cảnh báo khi số dư thấp
--   Cập nhật số dư theo thời gian thực
+-   Cập nhật số dư tự động 
 
 ### 4. Báo Cáo và Phân Tích
 
@@ -51,15 +51,6 @@
 -   Tạo, sửa và xóa danh mục tùy chỉnh
 -   Phân biệt danh mục thu nhập và chi tiêu
 -   Lưu trữ danh mục trong cơ sở dữ liệu
-
-### 6. Tính Năng Bổ Sung
-
--   Hỗ trợ giao diện sáng/tối
--   Lọc theo khoảng thời gian
--   Tìm kiếm
--   Xuất báo cáo Excel
--   Tính toán tự động
--   Giao diện người dùng hiện đại và linh hoạt
 
 ## Cài Đặt
 
