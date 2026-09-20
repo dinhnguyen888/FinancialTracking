@@ -41,19 +41,25 @@ class PendingNotificationsView(ft.Container):
                 # Minimalist Header
                 ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
                         ft.Column(
                             spacing=2,
                             controls=[
-                                ft.Text("Hộp thư Biến động số dư", size=20, weight=ft.FontWeight.BOLD, color=AppColors.TEXT_PRIMARY),
-                                ft.Text("Tự động nhận diện từ Sacombank, Cake, MoMo...", size=12, color=AppColors.TEXT_MUTED),
+                                ft.Text("Hộp thư", size=22, weight=ft.FontWeight.BOLD, color=AppColors.TEXT_PRIMARY),
+                                ft.Text("Sacombank, MoMo, Cake, VCB...", size=12, color=AppColors.TEXT_MUTED),
                             ]
                         ),
-                        ft.Container(
-                            content=ft.Icon(ft.Icons.MARK_EMAIL_READ_OUTLINED, size=22, color=AppColors.PRIMARY_LIGHT),
-                            bgcolor=AppColors.CARD_DARK,
-                            border_radius=12,
-                            padding=8,
+                        ft.FilledButton(
+                            "Dán Email/SMS",
+                            icon=ft.Icons.CONTENT_PASTE_ROUNDED,
+                            style=ft.ButtonStyle(
+                                bgcolor=AppColors.CARD_DARK,
+                                color=AppColors.PRIMARY_LIGHT,
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                            ),
+                            on_click=self._open_paste_dialog,
                         )
                     ]
                 ),
@@ -108,6 +114,79 @@ class PendingNotificationsView(ft.Container):
             ]
         )
         self.refresh_data()
+
+    def _open_paste_dialog(self, e):
+        txt_input = ft.TextField(
+            label="Nội dung Email hoặc Tin nhắn",
+            hint_text="Dán nội dung email hoặc SMS ngân hàng vào đây...\n(Ví dụ: Sacombank Phát sinh: - 50,000 VND...)",
+            multiline=True,
+            min_lines=4,
+            max_lines=8,
+            autofocus=True,
+            border_color=AppColors.PRIMARY,
+        )
+        err_msg = ft.Text("", size=12, color=AppColors.EXPENSE, visible=False)
+
+        def on_parse(_):
+            val = txt_input.value.strip() if txt_input.value else ""
+            if not val:
+                err_msg.value = "Vui lòng dán nội dung tin nhắn hoặc email!"
+                err_msg.visible = True
+                self.page.update()
+                return
+
+            saved = self.notif_service.process_incoming_message(val, sender_app="Dán nội dung")
+            if saved:
+                dlg.open = False
+                self._set_tab("pending")
+                self.refresh_data()
+                if self.page:
+                    snack = ft.SnackBar(
+                        content=ft.Text(f"Đã nhận diện: {saved.bank_name} - {format_currency(saved.amount)}"),
+                        bgcolor=AppColors.INCOME if saved.transaction_type == "income" else AppColors.PRIMARY,
+                        duration=3000,
+                    )
+                    self.page.overlay.append(snack)
+                    snack.open = True
+                    self.page.update()
+            else:
+                err_msg.value = "Không nhận diện được số tiền biến động từ nội dung này. Vui lòng kiểm tra lại!"
+                err_msg.visible = True
+                self.page.update()
+
+        def on_cancel(_):
+            dlg.open = False
+            self.page.update()
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Icon(ft.Icons.CONTENT_PASTE_ROUNDED, color=AppColors.PRIMARY, size=22),
+                    ft.Text("Dán Email / SMS Ngân hàng", size=16, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Column(
+                tight=True,
+                spacing=10,
+                controls=[
+                    ft.Text("Hệ thống tự động bóc tách số tiền, loại giao dịch, nội dung và số dư:", size=12, color=AppColors.TEXT_MUTED),
+                    txt_input,
+                    err_msg,
+                ]
+            ),
+            actions=[
+                ft.TextButton("Hủy", on_click=on_cancel),
+                ft.FilledButton(
+                    "Nhận diện ngay",
+                    style=ft.ButtonStyle(bgcolor=AppColors.PRIMARY),
+                    on_click=on_parse,
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            )
+        if self.page:
+            self.page.show_dialog(dlg)
 
     def refresh_data(self, *args, **kwargs):
         try:

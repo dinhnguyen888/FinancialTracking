@@ -94,6 +94,18 @@ class Database:
                 self._seed_default_categories(cursor)
                 conn.commit()
 
+            # Clean up any existing duplicate pending notifications (keeping oldest unique row)
+            cursor.execute("""
+                DELETE FROM bank_notifications 
+                WHERE status = 'pending' AND id NOT IN (
+                    SELECT MIN(id) 
+                    FROM bank_notifications 
+                    WHERE status = 'pending' 
+                    GROUP BY amount, transaction_type, COALESCE(detected_description, '')
+                )
+            """)
+            conn.commit()
+
     def _seed_default_categories(self, cursor: sqlite3.Cursor):
         for item in DEFAULT_INCOME_CATEGORIES:
             cursor.execute(

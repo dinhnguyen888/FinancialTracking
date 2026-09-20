@@ -361,6 +361,61 @@ class BankNotificationRepository:
             cursor.execute("SELECT COUNT(*) FROM bank_notifications WHERE status = 'pending'")
             return cursor.fetchone()[0]
 
+    def is_duplicate(
+        self,
+        amount: float,
+        transaction_type: str,
+        description: str,
+        raw_content: str,
+        bank_name: Optional[str] = None
+    ) -> bool:
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 1. Exact raw_content match among non-discarded notifications
+            cursor.execute(
+                "SELECT id FROM bank_notifications WHERE raw_content = ? AND status != 'discarded' LIMIT 1",
+                (raw_content,)
+            )
+            if cursor.fetchone():
+                return True
+
+            desc_clean = (description or "").strip()
+            # 2. Check pending notifications with exact same amount, transaction type, and description
+            if len(desc_clean) >= 4:
+                cursor.execute(
+                    """
+                    SELECT id FROM bank_notifications 
+                    WHERE amount = ? AND transaction_type = ? AND detected_description = ? AND status = 'pending'
+                    LIMIT 1
+                    """,
+                    (amount, transaction_type, desc_clean)
+                )
+                if cursor.fetchone():
+                    return True
+
+            # 3. Match identical amount + bank + transaction_type for pending notifications if description is similar
+            if bank_name:
+                cursor.execute(
+                    """
+                    SELECT id, detected_description FROM bank_notifications
+                    WHERE bank_name = ? AND amount = ? AND transaction_type = ? AND status = 'pending'
+                    LIMIT 5
+                    """,
+                    (bank_name, amount, transaction_type)
+                )
+                rows = cursor.fetchall()
+                for r in rows:
+                    existing_desc = (r["detected_description"] or "").strip().lower()
+                    new_desc = desc_clean.lower()
+                    if existing_desc == new_desc:
+                        return True
+                    if len(existing_desc) >= 6 and len(new_desc) >= 6:
+                        if existing_desc in new_desc or new_desc in existing_desc:
+                            return True
+
+            return False
+
     def add(self, n: BankNotification) -> int:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()

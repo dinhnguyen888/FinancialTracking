@@ -40,15 +40,25 @@ class NotificationService:
         if not parsed.is_valid:
             return None
 
-        # Deduplication: Prevent duplicate ingestion of the exact same notification event
-        # (e.g. if incoming_notifications.jsonl is polled twice before being truncated)
-        event_key = f"{sender_app}_{notif_time}_{notif_id}_{raw_message}"
+        # Deduplication Layer 1: In-memory fingerprint
+        msg_hash = hash(raw_message.strip().lower())
+        event_key = f"{sender_app}_{parsed.amount}_{parsed.transaction_type}_{msg_hash}"
         if event_key in self._processed_keys:
             return None
         self._processed_keys.add(event_key)
         # Keep set bounded
         if len(self._processed_keys) > 500:
             self._processed_keys = set(list(self._processed_keys)[-200:])
+
+        # Deduplication Layer 2: Persistent database duplicate check
+        if self.notif_repo.is_duplicate(
+            amount=parsed.amount,
+            transaction_type=parsed.transaction_type,
+            description=parsed.description,
+            raw_content=raw_message,
+            bank_name=parsed.bank_name
+        ):
+            return None
 
 
         # Find matching category in database

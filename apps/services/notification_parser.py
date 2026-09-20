@@ -89,15 +89,16 @@ class BankNotificationParser:
     def extract_amount_and_type(cls, text: str) -> Tuple[float, str]:
         """
         Extract transaction amount and determine if it's income (+) or expense (-).
-        Handles Sacombank PS: +/-..., Cake Bank vừa tăng / vừa giảm, MoMo nhận tiền, etc.
+        Handles Sacombank email/app (Phát sinh/Transaction: +/-...), Cake Bank, MoMo, etc.
         """
         lower_text = text.lower()
         
-        # 1. Sacombank pattern: PS: +3,500,000 VND or PS: -150,000 VND
-        ps_match = re.search(r'PS:\s*([+\-])\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?', text, re.IGNORECASE)
-        if ps_match:
-            sign = ps_match.group(1)
-            raw_amt = ps_match.group(2)
+        # 1. Bilingual Email / Sacombank table format:
+        # e.g. "Phát sinh/ Transaction: - 50,000 VND" or "Phát sinh/Transaction: + 100,000 VND" or "PS: +3,500,000 VND"
+        bilingual_ps = re.search(r'(?:Phát sinh|Transaction|PS)[^:\n]*:\s*([+\-])\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?', text, re.IGNORECASE)
+        if bilingual_ps:
+            sign = bilingual_ps.group(1)
+            raw_amt = bilingual_ps.group(2)
             amount = cls._clean_number(raw_amt)
             tx_type = "income" if sign == "+" else "expense"
             if amount > 0:
@@ -168,19 +169,26 @@ class BankNotificationParser:
     @classmethod
     def extract_description(cls, text: str) -> str:
         """
-        Extract transaction description (ND, Nội dung, Ref, kèm lời nhắn, Sacombank tail, etc.)
+        Extract transaction description (Nội dung/Description, ND, Ref, kèm lời nhắn, etc.)
         """
-        # 1. Sacombank Pay tail: text after 'Số dư khả dụng: ... VND.'
+        # 1. Sacombank Email / Bilingual template: "Nội dung/ Description: ..."
+        email_desc = re.search(r'(?:Nội dung|Description)[^:\n]*:\s*([^\r\n]+)', text, re.IGNORECASE)
+        if email_desc:
+            desc = email_desc.group(1).strip().strip('"').strip("'").strip('“').strip('”')
+            if len(desc) >= 3:
+                return desc
+
+        # 2. Sacombank Pay tail: text after 'Số dư khả dụng: ... VND.'
         saco_match = re.search(r'Số dư khả dụng:[^.]*\.\s*(.+)', text, re.IGNORECASE)
         if saco_match:
             desc = saco_match.group(1).strip()
             if len(desc) >= 3:
                 return desc
 
-        # 2. Explicit label markers
+        # 3. Explicit label markers
         priority_patterns = [
             r'(?:kèm lời nhắn|lời nhắn|loi nhan):\s*["“]?([^"”\n\.]+)',
-            r'(?:ND|Nội dung|Noi dung|Ghi chu|Ghi chú):\s*([^.\n]+)',
+            r'(?:ND|Noi dung|Ghi chu|Ghi chú):\s*([^.\n]+)',
             r'(?:tai|tại|cho)\s+([A-Z0-9\s&_\-]+?)(?:qua|\.|$)',
             r'(?:GD|Ref):\s*([^.\n]+)',
         ]
@@ -191,7 +199,7 @@ class BankNotificationParser:
                 if len(desc) >= 3:
                     return desc
         
-        # 3. If no explicit marker, use cleaned short preview
+        # 4. If no explicit marker, use cleaned short preview
         cleaned = re.sub(r'[\r\n]+', ' ', text).strip()
         if len(cleaned) > 50:
             return cleaned[:47] + "..."
@@ -199,11 +207,13 @@ class BankNotificationParser:
 
     @classmethod
     def suggest_category(cls, description: str, raw_text: str, tx_type: str) -> str:
-        combined = f"{description} {raw_text}".lower()
+        # Match primarily on description with word boundaries to avoid false positives (e.g. 'com' in sacombank.com)
+        desc_lower = description.lower()
         
         for category, keywords in CATEGORY_KEYWORDS.items():
             for kw in keywords:
-                if kw in combined:
+                pattern = r'(?<![a-zA-Z0-9_])' + re.escape(kw.lower()) + r'(?![a-zA-Z0-9_])'
+                if re.search(pattern, desc_lower):
                     return category
 
         return "Thu nhập khác" if tx_type == "income" else "Chi tiêu khác"
@@ -227,20 +237,35 @@ class BankNotificationParser:
         suggested_cat = cls.suggest_category(description, raw_message, tx_type)
 
         # Extract balance if present:
-        # Handles "Số dư khả dụng: 19,957,923 VND" (Sacombank)
+        # Handles "Số dư khả dụng/ Available balance: 19,909,423 VND" (Sacombank email)
+        # Handles "Số dư khả dụng: 19,957,923 VND" (Sacombank app)
         # Handles "Số dư hiện tại của tài khoản thanh toán là 66.428 đ" (Cake Bank)
-        # Handles "So du 5,420,000VND", "Số dư: 30,420,000 VND", etc.
         balance = None
         bal_patterns = [
-            r'Số dư khả dụng:\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?',
+            r'(?:Số dư khả dụng|Available balance|Số dư|Balance|SD cuoi|So du)[^:\n]*:\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?',
             r'Số dư hiện tại[^:]*là\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?',
-            r'(?:So du|Số dư|SD cuoi|So du cuoi)\s*:?\s*([\d\.,]+)\s*(?:vnd|vnđ|d|đ)?'
         ]
         for b_pat in bal_patterns:
             bal_match = re.search(b_pat, raw_message, re.IGNORECASE)
             if bal_match:
                 balance = cls._clean_number(bal_match.group(1))
                 break
+
+        # Extract transaction date/time if present in email/message
+        # e.g. "Ngày/ Date: 20/09/2026 20:37"
+        tx_time = None
+        date_match = re.search(r'(?:Ngày|Date)[^:\n]*:\s*([0-9]{1,2}[/\-][0-9]{1,2}[/\-][0-9]{4}(?:\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)?)', raw_message, re.IGNORECASE)
+        if date_match:
+            raw_date_str = date_match.group(1).strip()
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M", "%d/%m/%Y", "%d-%m-%Y"):
+                try:
+                    dt = datetime.strptime(raw_date_str, fmt)
+                    tx_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    break
+                except Exception:
+                    pass
+        if not tx_time:
+            tx_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         return ParseResult(
             is_valid=True,
@@ -250,7 +275,7 @@ class BankNotificationParser:
             description=description,
             suggested_category=suggested_cat,
             balance=balance,
-            transaction_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            transaction_time=tx_time,
             raw_message=raw_message
         )
 
