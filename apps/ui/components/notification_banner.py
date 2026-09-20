@@ -2,16 +2,22 @@ import flet as ft
 from apps.core.theme import AppColors
 
 class NotificationBanner(ft.Container):
-    def __init__(self, pending_count: int = 0, permission_granted: bool = True, on_review_click=None, on_request_perm=None):
+    def __init__(
+        self,
+        pending_count: int = 0,
+        permission_granted: bool = True,
+        on_review_click=None,
+        on_request_permission=None,
+    ):
         self.pending_count = pending_count
         self.permission_granted = permission_granted
         self.on_review_click = on_review_click
-        self.on_request_perm = on_request_perm
+        self.on_request_permission = on_request_permission
 
         super().__init__(
             content=self._build_content(),
             bgcolor=self._get_bg_color(),
-            border=ft.Border.all(1, self._get_border_color()),
+            border=self._get_border(),
             border_radius=16,
             padding=ft.Padding.symmetric(horizontal=14, vertical=10),
             animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
@@ -19,29 +25,29 @@ class NotificationBanner(ft.Container):
 
     def _get_bg_color(self):
         if not self.permission_granted:
-            return ft.Colors.with_opacity(0.12, AppColors.WARNING)
+            return ft.Colors.with_opacity(0.08, AppColors.EXPENSE)
         if self.pending_count > 0:
             return ft.Colors.with_opacity(0.08, AppColors.PRIMARY)
         return AppColors.CARD_DARK
 
-    def _get_border_color(self):
+    def _get_border(self):
         if not self.permission_granted:
-            return AppColors.WARNING
+            return ft.Border.all(1, ft.Colors.with_opacity(0.3, AppColors.EXPENSE))
         if self.pending_count > 0:
-            return AppColors.PRIMARY
-        return ft.Colors.with_opacity(0.12, AppColors.BORDER_DARK)
+            return ft.Border.all(1, AppColors.PRIMARY)
+        return ft.Border.all(1, ft.Colors.with_opacity(0.12, AppColors.BORDER_DARK))
 
-    def set_state(self, count: int, permission_granted: bool = True):
-        self.pending_count = count
+    def update_state(self, pending_count: int, permission_granted: bool):
+        self.pending_count = pending_count
         self.permission_granted = permission_granted
         self.content = self._build_content()
         self.bgcolor = self._get_bg_color()
-        self.border = ft.Border.all(1, self._get_border_color())
+        self.border = self._get_border()
         if self.page:
             self.update()
 
     def set_count(self, count: int):
-        self.set_state(count, self.permission_granted)
+        self.update_state(count, self.permission_granted)
 
     def _build_content(self) -> ft.Control:
         if not self.permission_granted:
@@ -49,16 +55,29 @@ class NotificationBanner(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Row(
+                        expand=True,
                         spacing=8,
                         controls=[
-                            ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=AppColors.WARNING, size=18),
-                            ft.Text("Chưa bật quyền Đọc thông báo", size=11, weight=ft.FontWeight.W_500, color=AppColors.TEXT_PRIMARY),
+                            ft.Container(
+                                width=8,
+                                height=8,
+                                border_radius=4,
+                                bgcolor=AppColors.EXPENSE,
+                            ),
+                            ft.Column(
+                                spacing=1,
+                                expand=True,
+                                controls=[
+                                    ft.Text("Chưa cấp quyền nhận thông báo", size=11, weight=ft.FontWeight.BOLD, color=AppColors.TEXT_PRIMARY),
+                                    ft.Text("Bấm để tự động bắt tiền Sacombank, MoMo, Cake", size=10, color=AppColors.TEXT_MUTED, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                ]
+                            )
                         ]
                     ),
                     ft.FilledButton(
-                        content=ft.Text("Bật quyền", size=11, weight=ft.FontWeight.BOLD),
-                        style=ft.ButtonStyle(bgcolor=AppColors.WARNING, color=ft.Colors.BLACK),
-                        on_click=lambda _: self.on_request_perm() if self.on_request_perm else None,
+                        content=ft.Text("Bật ngay", size=11, weight=ft.FontWeight.BOLD),
+                        style=ft.ButtonStyle(bgcolor=AppColors.PRIMARY),
+                        on_click=lambda _: self.on_request_permission() if self.on_request_permission else None,
                     )
                 ]
             )
@@ -68,6 +87,7 @@ class NotificationBanner(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Row(
+                        expand=True,
                         spacing=10,
                         controls=[
                             ft.Container(
@@ -78,6 +98,7 @@ class NotificationBanner(ft.Container):
                             ),
                             ft.Column(
                                 spacing=2,
+                                expand=True,
                                 controls=[
                                     ft.Row(
                                         spacing=6,
@@ -91,7 +112,7 @@ class NotificationBanner(ft.Container):
                                             )
                                         ]
                                     ),
-                                    ft.Text("Biến động số dư đang chờ bạn duyệt", size=11, color=AppColors.TEXT_MUTED),
+                                    ft.Text("Biến động số dư đang chờ bạn duyệt", size=11, color=AppColors.TEXT_MUTED, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                                 ]
                             )
                         ]
@@ -108,6 +129,7 @@ class NotificationBanner(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Row(
+                        expand=True,
                         spacing=8,
                         controls=[
                             ft.Container(
@@ -116,7 +138,14 @@ class NotificationBanner(ft.Container):
                                 border_radius=4,
                                 bgcolor=AppColors.INCOME,
                             ),
-                            ft.Text("Bắt thông báo Sacombank, Cake, MoMo: Sẵn sàng", size=11, color=AppColors.TEXT_MUTED),
+                            ft.Column(
+                                spacing=1,
+                                expand=True,
+                                controls=[
+                                    ft.Text("Bắt biến động số dư: Sẵn sàng", size=11, weight=ft.FontWeight.BOLD, color=AppColors.TEXT_PRIMARY),
+                                    ft.Text("Sacombank, Cake, MoMo", size=10, color=AppColors.TEXT_MUTED, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                ]
+                            )
                         ]
                     ),
                     ft.TextButton(

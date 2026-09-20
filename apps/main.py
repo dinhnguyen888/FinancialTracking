@@ -54,6 +54,7 @@ def main(page: ft.Page):
     page.theme = get_app_theme()
     page.bgcolor = AppColors.BG_DARK
     page.padding = 0
+    page.scroll = None
 
     # Mobile frame dimensions for desktop preview (ignored on mobile)
     try:
@@ -137,7 +138,31 @@ def main(page: ft.Page):
         except Exception:
             pass
 
-    # 5. Native Android Bank Notification Watcher
+    # 5. Permission & Trigger Utilities
+    def check_permission_status() -> bool:
+        candidates = [
+            DATA_DIR / "permission_status.txt",
+            DATA_DIR.parent / "permission_status.txt",
+            Path.home() / "permission_status.txt",
+            Path("/storage/emulated/0/Android/data/com.cashflowtracking.cashflowtracking/files/permission_status.txt"),
+            Path("/sdcard/Android/data/com.cashflowtracking.cashflowtracking/files/permission_status.txt"),
+        ]
+        for c in candidates:
+            if c.exists() and c.is_file():
+                try:
+                    return c.read_text().strip() == "granted"
+                except Exception:
+                    pass
+        return False
+
+    def request_notification_permission():
+        try:
+            (DATA_DIR / "request_settings.trigger").touch()
+            (DATA_DIR.parent / "request_settings.trigger").touch()
+        except Exception:
+            pass
+
+    # 6. Native Android Bank Notification Watcher
     def check_incoming_notifications():
         candidate_paths = [
             DATA_DIR / "incoming_notifications.jsonl",
@@ -193,10 +218,14 @@ def main(page: ft.Page):
         while True:
             await asyncio.sleep(2)
             check_incoming_notifications()
+            try:
+                view_dashboard.refresh_notifications()
+            except Exception:
+                pass
 
     asyncio.create_task(poll_notifications())
 
-    # 6. Handlers for navigation & dialogs
+    # 7. Handlers for navigation & dialogs
     def open_add_transaction_modal(existing_tx=None):
         sheet = AddTransactionBottomSheet(
             income_repo=income_repo,
@@ -211,7 +240,7 @@ def main(page: ft.Page):
         nav_bar.selected_index = index
         on_nav_change(None)
 
-    # 7. Create Views
+    # 8. Create Views
     view_dashboard = DashboardView(
         income_repo=income_repo,
         expense_repo=expense_repo,
@@ -220,6 +249,8 @@ def main(page: ft.Page):
         on_navigate_tab=navigate_to_tab,
         on_open_add=lambda: open_add_transaction_modal(None),
         on_edit_tx=open_add_transaction_modal,
+        get_permission_status=check_permission_status,
+        on_request_permission=request_notification_permission,
     )
 
     view_transactions = TransactionsView(
@@ -255,10 +286,11 @@ def main(page: ft.Page):
         view_categories,
     ]
 
-    # Content Container
+    # Content Container — explicit bgcolor to override Flutter Scaffold default grey
     main_content = ft.Container(
         content=views[0],
         expand=True,
+        bgcolor=AppColors.BG_DARK,
     )
 
     def on_nav_change(e):
@@ -289,32 +321,33 @@ def main(page: ft.Page):
     EventBus.subscribe(EVENT_TRANSACTION_UPDATED, lambda *_: update_inbox_badge())
 
     page.navigation_bar = nav_bar
-    page.add(main_content)
+    # Use explicit padding instead of SafeArea — SafeArea sometimes resets bgcolor to grey on Android
+    page.add(
+        ft.Container(
+            content=main_content,
+            expand=True,
+            bgcolor=AppColors.BG_DARK,
+        )
+    )
 
     # Initial badge update
     update_inbox_badge()
 
     # 9. First-launch Permission Prompt Check
     def check_notification_permission_on_launch():
-        candidate_flags = [
-            DATA_DIR / "notification_permission_enabled.flag",
-            DATA_DIR.parent / "notification_permission_enabled.flag",
-            Path.home() / "notification_permission_enabled.flag",
-            Path("/storage/emulated/0/Android/data/com.cashflowtracking.cashflowtracking/files/notification_permission_enabled.flag"),
-            Path("/sdcard/Android/data/com.cashflowtracking.cashflowtracking/files/notification_permission_enabled.flag"),
-        ]
-        is_granted = any(p.exists() for p in candidate_flags)
-        if not is_granted:
+        if not check_permission_status():
             def on_grant(_):
                 try:
-                    page.pop_dialog()
+                    perm_dlg.open = False
+                    page.update()
                 except Exception:
                     pass
-                page.launch_url("cashflow://settings/notifications")
+                request_notification_permission()
 
             def on_later(_):
                 try:
-                    page.pop_dialog()
+                    perm_dlg.open = False
+                    page.update()
                 except Exception:
                     pass
 
@@ -354,17 +387,18 @@ def main(page: ft.Page):
                 ),
                 actions=[
                     ft.TextButton("Để sau", on_click=on_later),
-                    ft.ElevatedButton(
+                    ft.FilledButton(
                         "Cấp quyền ngay",
                         icon=ft.Icons.CHECK_CIRCLE,
-                        bgcolor=AppColors.PRIMARY,
-                        color=ft.Colors.WHITE,
+                        style=ft.ButtonStyle(bgcolor=AppColors.PRIMARY),
                         on_click=on_grant,
                     ),
                 ],
                 actions_alignment=ft.MainAxisAlignment.END,
+                open=True,
             )
-            page.show_dialog(perm_dlg)
+            page.overlay.append(perm_dlg)
+            page.update()
 
     # Run permission check shortly after UI mounts
     async def delayed_permission_check():

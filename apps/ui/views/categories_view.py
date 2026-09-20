@@ -35,7 +35,7 @@ class CategoriesView(ft.Container):
         super().__init__(
             content=self._build_layout(),
             expand=True,
-            padding=ft.Padding.only(left=16, right=16, top=10, bottom=16),
+            padding=ft.Padding.only(left=16, right=16, top=28, bottom=0),
         )
 
         EventBus.subscribe(EVENT_CATEGORY_UPDATED, self.refresh_data)
@@ -123,6 +123,9 @@ class CategoriesView(ft.Container):
                 card = self._build_category_card(cat)
                 self.list_container.controls.append(card)
 
+            # Bottom spacer to scroll above navigation bar
+            self.list_container.controls.append(ft.Container(height=80))
+
             if self.page:
                 self.update()
         except Exception:
@@ -135,6 +138,7 @@ class CategoriesView(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Row(
+                        expand=True,
                         spacing=12,
                         controls=[
                             ft.Container(
@@ -145,9 +149,16 @@ class CategoriesView(ft.Container):
                             ),
                             ft.Column(
                                 spacing=2,
+                                expand=True,
                                 controls=[
                                     ft.Text(cat.name, size=14, weight=ft.FontWeight.W_600, color=AppColors.TEXT_PRIMARY),
-                                    ft.Text(cat.description or "Không có mô tả", size=11, color=AppColors.TEXT_MUTED),
+                                    ft.Text(
+                                        cat.description or "Không có mô tả",
+                                        size=11,
+                                        color=AppColors.TEXT_MUTED,
+                                        max_lines=1,
+                                        overflow=ft.TextOverflow.ELLIPSIS,
+                                    ),
                                 ]
                             )
                         ]

@@ -55,4 +55,17 @@ def get_app_theme() -> ft.Theme:
         color_scheme_seed=AppColors.PRIMARY,
         font_family="sans-serif",
         use_material3=True,
+        color_scheme=ft.ColorScheme(
+            primary=AppColors.PRIMARY,
+            on_primary=AppColors.TEXT_WHITE,
+            secondary=AppColors.SECONDARY,
+            surface=AppColors.BG_DARK,
+            on_surface=AppColors.TEXT_PRIMARY,
+            on_surface_variant=AppColors.TEXT_SECONDARY,
+            surface_container=AppColors.SURFACE_DARK,
+            surface_container_low=AppColors.BG_DARK,
+            surface_container_lowest=AppColors.BG_DARK,
+            surface_container_high=AppColors.CARD_DARK,
+            surface_container_highest=AppColors.CARD_DARK,
+        ),
     )

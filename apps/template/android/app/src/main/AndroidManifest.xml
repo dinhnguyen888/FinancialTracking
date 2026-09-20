@@ -39,13 +39,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />   <!-- Google TV -->
             </intent-filter>
-            <!-- Cashflow custom deep linking for settings & actions -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="cashflow" />
-            </intent-filter>
+            <!-- flet: deep linking  -->
         </activity>
         <provider
             android:name="androidx.core.content.FileProvider"

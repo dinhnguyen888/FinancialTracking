@@ -95,10 +95,10 @@ class TransactionCard(ft.Container):
                                 controls=[
                                     ft.Text(
                                         title,
-                                        size=13,
+                                        size=14,
                                         weight=ft.FontWeight.W_600,
                                         color=AppColors.TEXT_PRIMARY,
-                                        max_lines=2,
+                                        max_lines=1,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
                                     ft.Row(
@@ -112,25 +112,37 @@ class TransactionCard(ft.Container):
                         ]
                     ),
 
-                    # Right: Amount & Delete Action
+                    # Right: Amount & Actions
                     ft.Column(
                         alignment=ft.MainAxisAlignment.CENTER,
                         horizontal_alignment=ft.CrossAxisAlignment.END,
-                        spacing=4,
+                        spacing=2,
                         controls=[
                             ft.Text(
                                 amount_str,
-                                size=15,
+                                size=14,
                                 weight=ft.FontWeight.BOLD,
                                 color=amount_color,
                             ),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE_OUTLINE,
-                                icon_size=18,
-                                icon_color=ft.Colors.with_opacity(0.6, AppColors.EXPENSE),
-                                tooltip="Xóa giao dịch",
-                                on_click=lambda _: self.on_delete(self.tx) if self.on_delete else None,
-                            ),
+                            ft.Row(
+                                spacing=0,
+                                controls=[
+                                    ft.IconButton(
+                                        icon=ft.Icons.EDIT_OUTLINED,
+                                        icon_size=16,
+                                        icon_color=AppColors.TEXT_MUTED,
+                                        tooltip="Sửa giao dịch",
+                                        on_click=lambda _: self.on_edit(self.tx) if self.on_edit else None,
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.DELETE_OUTLINE,
+                                        icon_size=16,
+                                        icon_color=AppColors.EXPENSE,
+                                        tooltip="Xóa giao dịch",
+                                        on_click=lambda _: self.on_delete(self.tx) if self.on_delete else None,
+                                    ),
+                                ]
+                            )
                         ]
                     ),
                 ]
@@ -139,7 +151,5 @@ class TransactionCard(ft.Container):
             border_radius=16,
             padding=ft.Padding.symmetric(horizontal=14, vertical=12),
             border=ft.Border.all(1, ft.Colors.with_opacity(0.12, AppColors.BORDER_DARK)),
-            ink=True,
-            on_click=lambda _: self.on_edit(self.tx) if self.on_edit else None,
             animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
         )

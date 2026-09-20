@@ -50,7 +50,7 @@ class TransactionsView(ft.Container):
         super().__init__(
             content=self._build_layout(),
             expand=True,
-            padding=ft.Padding.only(left=16, right=16, top=10, bottom=0),
+            padding=ft.Padding.only(left=16, right=16, top=28, bottom=0),
         )
 
         EventBus.subscribe(EVENT_TRANSACTION_UPDATED, self.refresh_data)
@@ -104,7 +104,6 @@ class TransactionsView(ft.Container):
                         controls=[self.list_container],
                         expand=True,
                         spacing=10,
-                        padding=ft.Padding.only(bottom=90),
                     ),
                     expand=True,
                 )
@@ -199,6 +198,9 @@ class TransactionsView(ft.Container):
                         on_delete=self._delete_tx,
                     )
                     self.list_container.controls.append(card)
+
+            # Bottom spacer to scroll above navigation bar
+            self.list_container.controls.append(ft.Container(height=80))
 
             if self.page:
                 self.update()

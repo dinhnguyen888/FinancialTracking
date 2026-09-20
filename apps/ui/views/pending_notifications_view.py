@@ -26,7 +26,7 @@ class PendingNotificationsView(ft.Container):
         super().__init__(
             content=self._build_layout(),
             expand=True,
-            padding=ft.Padding.only(left=16, right=16, top=10, bottom=0),
+            padding=ft.Padding.only(left=16, right=16, top=28, bottom=0),
         )
 
         EventBus.subscribe(EVENT_NOTIFICATION_RECEIVED, self.refresh_data)
@@ -49,15 +49,12 @@ class PendingNotificationsView(ft.Container):
                                 ft.Text("Tự động nhận diện từ Sacombank, Cake, MoMo...", size=12, color=AppColors.TEXT_MUTED),
                             ]
                         ),
-                        ft.IconButton(
-                            icon=ft.Icons.REFRESH,
-                            icon_size=20,
-                            icon_color=AppColors.PRIMARY_LIGHT,
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.MARK_EMAIL_READ_OUTLINED, size=22, color=AppColors.PRIMARY_LIGHT),
                             bgcolor=AppColors.CARD_DARK,
-                            tooltip="Làm mới",
-                            on_click=lambda _: self.refresh_data(),
+                            border_radius=12,
+                            padding=8,
                         )
-
                     ]
                 ),
 
@@ -77,7 +74,6 @@ class PendingNotificationsView(ft.Container):
                         controls=[self.list_container],
                         expand=True,
                         spacing=12,
-                        padding=ft.Padding.only(bottom=90),
                     ),
                     expand=True,
                 )
@@ -150,6 +146,9 @@ class PendingNotificationsView(ft.Container):
                     card = self._build_notif_card(n)
                     self.list_container.controls.append(card)
 
+            # Bottom spacer to scroll above navigation bar
+            self.list_container.controls.append(ft.Container(height=80))
+
             if self.page:
                 self.update()
         except Exception:
@@ -187,18 +186,10 @@ class PendingNotificationsView(ft.Container):
         actions = []
         if n.status == "pending":
             actions = [
-                ft.OutlinedButton(
-                    content=ft.Row(
-                        spacing=4,
-                        controls=[
-                            ft.Icon(ft.Icons.CLOSE, size=14, color=AppColors.EXPENSE),
-                            ft.Text("Bỏ qua", size=12, color=AppColors.EXPENSE),
-                        ]
-                    ),
-                    style=ft.ButtonStyle(
-                        side=ft.BorderSide(1, ft.Colors.with_opacity(0.3, AppColors.EXPENSE)),
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
+                ft.IconButton(
+                    icon=ft.Icons.CLOSE,
+                    icon_color=AppColors.EXPENSE,
+                    tooltip="Bỏ qua",
                     on_click=lambda _, nid=n.id: self._discard_notif(nid),
                 ),
                 ft.FilledButton(
@@ -206,13 +197,10 @@ class PendingNotificationsView(ft.Container):
                         spacing=4,
                         controls=[
                             ft.Icon(ft.Icons.CHECK, size=16, color=ft.Colors.WHITE),
-                            ft.Text("Lưu vào sổ", size=12, weight=ft.FontWeight.BOLD),
+                            ft.Text("Lưu", size=12, weight=ft.FontWeight.BOLD),
                         ]
                     ),
-                    style=ft.ButtonStyle(
-                        bgcolor=AppColors.PRIMARY,
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
+                    style=ft.ButtonStyle(bgcolor=AppColors.PRIMARY),
                     on_click=lambda _, nid=n.id, dd=cat_dropdown: self._approve_notif(nid, dd),
                 )
             ]
@@ -222,84 +210,69 @@ class PendingNotificationsView(ft.Container):
                 ft.Text(status_text, size=11, color=AppColors.INCOME if n.status == "approved" else AppColors.TEXT_MUTED)
             ]
 
-        card_controls = [
-            # Header: Bank + Time + Amount
-            ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                controls=[
-                    ft.Row(
-                        spacing=8,
-                        controls=[
-                            ft.Container(
-                                content=ft.Text(n.bank_name, size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                                bgcolor=bank_color,
-                                border_radius=8,
-                                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
-                            ),
-                            ft.Text(n.received_at, size=11, color=AppColors.TEXT_MUTED),
-                        ]
-                    ),
-                    ft.Text(amount_str, size=15, weight=ft.FontWeight.BOLD, color=amount_color),
-                ]
-            ),
-
-            # Description
-            ft.Text(
-                n.detected_description or "Biến động số dư tài khoản",
-                size=13,
-                weight=ft.FontWeight.W_600,
-                color=AppColors.TEXT_PRIMARY,
-            ),
-
-            # Raw snippet
-            ft.Container(
-                content=ft.Text(
-                    n.raw_content,
-                    size=10,
-                    color=AppColors.TEXT_MUTED,
-                    italic=True,
-                    max_lines=2,
-                    overflow=ft.TextOverflow.ELLIPSIS,
-                ),
-                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
-                border_radius=8,
-                padding=8,
-            ),
-        ]
-
-        if n.status == "pending":
-            card_controls.extend([
-                # Category selection on full width
-                ft.Row(
-                    spacing=8,
-                    controls=[
-                        ft.Icon(ft.Icons.CATEGORY_OUTLINED, size=16, color=AppColors.TEXT_MUTED),
-                        ft.Text("Danh mục:", size=12, color=AppColors.TEXT_SECONDARY),
-                        cat_dropdown,
-                    ]
-                ),
-                # Action buttons row
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.END,
-                    spacing=8,
-                    controls=actions,
-                ),
-            ])
-        else:
-            card_controls.append(
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    controls=[
-                        ft.Text(f"Danh mục: {n.suggested_category_name}", size=12, color=AppColors.TEXT_SECONDARY),
-                        ft.Row(spacing=6, controls=actions),
-                    ]
-                )
-            )
-
         return ft.Container(
             content=ft.Column(
                 spacing=10,
-                controls=card_controls,
+                controls=[
+                    # Header: Bank + Time + Amount
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Row(
+                                spacing=8,
+                                controls=[
+                                    ft.Container(
+                                        content=ft.Text(n.bank_name, size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                                        bgcolor=bank_color,
+                                        border_radius=8,
+                                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                                    ),
+                                    ft.Text(n.received_at, size=11, color=AppColors.TEXT_MUTED),
+                                ]
+                            ),
+                            ft.Text(amount_str, size=15, weight=ft.FontWeight.BOLD, color=amount_color),
+                        ]
+                    ),
+
+                    # Description
+                    ft.Text(
+                        n.detected_description or "Biến động số dư tài khoản",
+                        size=13,
+                        weight=ft.FontWeight.W_600,
+                        color=AppColors.TEXT_PRIMARY,
+                    ),
+
+                    # Raw snippet
+                    ft.Container(
+                        content=ft.Text(
+                            n.raw_content,
+                            size=10,
+                            color=AppColors.TEXT_MUTED,
+                            italic=True,
+                            max_lines=2,
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                        ),
+                        bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                        border_radius=8,
+                        padding=8,
+                    ),
+
+                    # Category Dropdown & Actions
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Row(
+                                expand=True,
+                                spacing=8,
+                                controls=[
+                                    ft.Icon(ft.Icons.CATEGORY_OUTLINED, size=16, color=AppColors.TEXT_MUTED),
+                                    cat_dropdown,
+                                ]
+                            ) if n.status == "pending" else ft.Text(f"Danh mục: {n.suggested_category_name}", size=12, color=AppColors.TEXT_SECONDARY),
+                            ft.Row(spacing=6, controls=actions),
+                        ]
+                    )
+                ]
             ),
             bgcolor=AppColors.CARD_DARK,
             border_radius=16,

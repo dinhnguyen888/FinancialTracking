@@ -43,7 +43,7 @@ class ReportsView(ft.Container):
         super().__init__(
             content=self._build_layout(),
             expand=True,
-            padding=ft.Padding.only(left=16, right=16, top=10, bottom=20),
+            padding=ft.Padding.only(left=16, right=16, top=28, bottom=0),
         )
 
         EventBus.subscribe(EVENT_TRANSACTION_UPDATED, self.refresh_data)
@@ -165,6 +165,9 @@ class ReportsView(ft.Container):
                 # Monthly Trend Section
                 ft.Text("Xu hướng Thu / Chi gần đây", size=16, weight=ft.FontWeight.BOLD, color=AppColors.TEXT_PRIMARY),
                 self.monthly_comparison_list,
+
+                # Bottom spacer to scroll above navigation bar
+                ft.Container(height=80),
             ]
         )
 
@@ -266,15 +269,15 @@ class ReportsView(ft.Container):
                                     ft.Row(
                                         spacing=4,
                                         controls=[
-                                            ft.Icon(ft.Icons.TRENDING_UP, size=14, color=AppColors.INCOME),
-                                            ft.Text(f"+{format_currency(m_inc)}", size=12, color=AppColors.INCOME, weight=ft.FontWeight.W_500),
+                                            ft.Icon(ft.Icons.ARROW_DOWNWARD, size=14, color=AppColors.INCOME),
+                                            ft.Text(format_currency(m_inc), size=12, color=AppColors.INCOME, weight=ft.FontWeight.W_500),
                                         ]
                                     ),
                                     ft.Row(
                                         spacing=4,
                                         controls=[
-                                            ft.Icon(ft.Icons.TRENDING_DOWN, size=14, color=AppColors.EXPENSE),
-                                            ft.Text(f"-{format_currency(m_exp)}", size=12, color=AppColors.EXPENSE, weight=ft.FontWeight.W_500),
+                                            ft.Icon(ft.Icons.ARROW_UPWARD, size=14, color=AppColors.EXPENSE),
+                                            ft.Text(format_currency(m_exp), size=12, color=AppColors.EXPENSE, weight=ft.FontWeight.W_500),
                                         ]
                                     ),
                                 ]
