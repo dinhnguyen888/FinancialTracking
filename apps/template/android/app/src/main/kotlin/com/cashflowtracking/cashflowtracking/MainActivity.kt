@@ -110,24 +110,39 @@ class MainActivity : FlutterFragmentActivity() {
         triggerWatcher = object : Runnable {
             override fun run() {
                 try {
-                    val trigger1 = File(filesDir, "request_settings.trigger")
-                    val dataDir = File(filesDir, "data")
-                    val trigger2 = File(dataDir, "request_settings.trigger")
-                    val rebindTrigger1 = File(filesDir, "rebind.trigger")
-                    val rebindTrigger2 = File(dataDir, "rebind.trigger")
+                    val candidateDirs = listOfNotNull(
+                        filesDir,
+                        File(filesDir, "data"),
+                        getExternalFilesDir(null),
+                        File(getExternalFilesDir(null) ?: filesDir, "data"),
+                        cacheDir
+                    )
 
-                    if (trigger1.exists() || trigger2.exists()) {
-                        trigger1.delete()
-                        trigger2.delete()
+                    var requestedSettings = false
+                    var requestedRebind = false
+
+                    for (d in candidateDirs) {
+                        val trigger = File(d, "request_settings.trigger")
+                        if (trigger.exists()) {
+                            trigger.delete()
+                            requestedSettings = true
+                        }
+                        val rebind = File(d, "rebind.trigger")
+                        if (rebind.exists()) {
+                            rebind.delete()
+                            requestedRebind = true
+                        }
+                    }
+
+                    if (requestedSettings) {
                         Log.i("CashflowNotif", "Received request_settings trigger, opening settings...")
                         val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         startActivity(intent)
                     }
 
-                    if (rebindTrigger1.exists() || rebindTrigger2.exists()) {
-                        rebindTrigger1.delete()
-                        rebindTrigger2.delete()
+                    if (requestedRebind) {
+                        Log.i("CashflowNotif", "Received rebind trigger, rebinding listener...")
                         checkAndRebindNotificationListener()
                     }
                 } catch (e: Exception) {

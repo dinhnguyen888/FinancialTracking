@@ -156,11 +156,21 @@ def main(page: ft.Page):
         return False
 
     def request_notification_permission():
-        try:
-            (DATA_DIR / "request_settings.trigger").touch()
-            (DATA_DIR.parent / "request_settings.trigger").touch()
-        except Exception:
-            pass
+        candidate_paths = [
+            DATA_DIR / "request_settings.trigger",
+            DATA_DIR.parent / "request_settings.trigger",
+            Path.home() / "request_settings.trigger",
+            Path("/data/data/com.cashflowtracking.cashflowtracking/files/request_settings.trigger"),
+            Path("/data/data/com.cashflowtracking.cashflowtracking/files/data/request_settings.trigger"),
+            Path("/storage/emulated/0/Android/data/com.cashflowtracking.cashflowtracking/files/request_settings.trigger"),
+            Path("/sdcard/Android/data/com.cashflowtracking.cashflowtracking/files/request_settings.trigger"),
+        ]
+        for p in candidate_paths:
+            try:
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.touch()
+            except Exception:
+                pass
 
     # 6. Native Android Bank Notification Watcher
     def check_incoming_notifications():
@@ -204,26 +214,17 @@ def main(page: ft.Page):
         if newly_processed:
             update_inbox_badge()
             show_live_transaction_snack(newly_processed[-1])
-            # Refresh currently visible view
-            current_view = views[nav_bar.selected_index]
-            if hasattr(current_view, "refresh_data"):
-                current_view.refresh_data()
-            page.update()
-
-    # Process any backlog on startup
-    check_incoming_notifications()
-
-    # Continuous background polling
-    async def poll_notifications():
-        while True:
-            await asyncio.sleep(2)
-            check_incoming_notifications()
+            # Refresh currently visible view if views and nav_bar are ready
             try:
-                view_dashboard.refresh_notifications()
+                current_view = views[nav_bar.selected_index]
+                if hasattr(current_view, "refresh_data"):
+                    current_view.refresh_data()
             except Exception:
                 pass
-
-    asyncio.create_task(poll_notifications())
+            try:
+                page.update()
+            except Exception:
+                pass
 
     # 7. Handlers for navigation & dialogs
     def open_add_transaction_modal(existing_tx=None):
@@ -330,8 +331,21 @@ def main(page: ft.Page):
         )
     )
 
-    # Initial badge update
+    # Initial badge update & check backlog
     update_inbox_badge()
+    check_incoming_notifications()
+
+    # Continuous background polling for bank notifications
+    async def poll_notifications():
+        while True:
+            await asyncio.sleep(2)
+            check_incoming_notifications()
+            try:
+                view_dashboard.refresh_notifications()
+            except Exception:
+                pass
+
+    asyncio.create_task(poll_notifications())
 
     # 9. First-launch Permission Prompt Check
     def check_notification_permission_on_launch():
