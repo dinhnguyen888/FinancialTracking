@@ -1,91 +1,114 @@
-# Hướng dẫn Tích hợp Android Notification Listener cho CashflowTracking Flet Mobile
+# CashflowTracking
 
-Tài liệu này hướng dẫn cách cấu hình và đóng gói ứng dụng **CashflowTracking Flet Mobile** thành file APK Android hoàn chỉnh, có khả năng tự động bắt thông báo biến động số dư từ các ứng dụng ngân hàng tại Việt Nam (Sacombank Pay, Cake Bank, MoMo, Vietcombank, MB Bank, Techcombank, TPBank...).
-
----
-
-## 1. Cơ Chế Hoạt Động Trên Android
-
-1. **Quyền hệ thống**: Android yêu cầu quyền `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE` để đọc thanh thông báo của hệ thống.
-2. **Cấp quyền từ người dùng**: Khi cài đặt app lần đầu, người dùng vào **Cài đặt điện thoại** $\rightarrow$ **Ứng dụng** $\rightarrow$ **Quyền truy cập đặc biệt** $\rightarrow$ **Quyền truy cập thông báo (Notification Access)** $\rightarrow$ Bật cho phép **CashflowTracking**.
-3. **Bóc tách thông báo**: `NotificationListenerService` nhận chuỗi thông báo $\rightarrow$ chuyển đến `BankNotificationParser` $\rightarrow$ tự động nhận diện Số tiền, Thu (+)/Chi (-), Ngân hàng, Nội dung $\rightarrow$ Lưu vào bảng `bank_notifications` để người dùng xác nhận hoặc tự động ghi sổ.
+> **Ứng dụng theo dõi tài chính cá nhân thông minh, bảo mật và tự động hóa dòng tiền trên nền tảng Android.**
 
 ---
 
-## 2. Cấu hình Android Manifest (`AndroidManifest.xml`)
+## Tổng Quan Dự Án (Project Overview)
 
-Thêm Service vào bên trong thẻ `<application>`:
+**CashflowTracking** là ứng dụng quản lý chi tiêu và theo dõi dòng tiền cá nhân được xây dựng với triết lý **Offline-First (ưu tiên ngoại tuyến)** và **Bảo mật tuyệt đối (100% On-Device)**. 
 
-```xml
-<service
-    android:name=".BankNotificationService"
-    android:label="CashflowTracking Notification Listener"
-    android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-    android:exported="true">
-    <intent-filter>
-        <action android:name="android.service.notification.NotificationListenerService" />
-    </intent-filter>
-</service>
+Khác với các ứng dụng thông thường yêu cầu người dùng phải gõ tay từng giao dịch hàng ngày, CashflowTracking giải quyết triệt để vấn đề này bằng tính năng **Tự động bắt biến động số dư ngầm** từ thông báo ngân hàng, ví điện tử và email giao dịch, giúp việc ghi chép chi tiêu diễn ra tức thì mà không tốn công sức.
+
+### Tính Năng Nổi Bật
+
+1. **Tự động bắt giao dịch ngân hàng & Email (Tính năng cốt lõi):**
+   - Lắng nghe biến động số dư nền từ các ngân hàng và ví điện tử phổ biến tại Việt Nam: **Sacombank, Vietcombank, MB Bank, Techcombank, TPBank, VPBank, ACB, BIDV, Cake by VPBank, MoMo, ZaloPay...**
+   - Bắt và bóc tách thông báo giao dịch gửi về qua **Gmail / Email app**.
+   - Bộ bóc tách thông minh (**Vietnamese Bank Notification Parser**) tự động nhận diện: Ngân hàng, Số tiền, Loại giao dịch (Thu / Chi), Nội dung và gợi ý Danh mục phù hợp.
+2. **Hệ thống chống trùng lặp đa lớp (Smart Multi-layered Deduplication):**
+   - Tự động bỏ qua thông báo gom nhóm của Gmail (`FLAG_GROUP_SUMMARY`).
+   - Băm nội dung (MD5 Fingerprint) kèm cơ chế Cooldown 10 phút, ngăn chặn Gmail gửi trùng thông báo khi đồng bộ nền.
+   - Kiểm tra trùng lặp trong cơ sở dữ liệu SQLite trước khi lưu và tự động dọn dẹp các bản ghi rác.
+3. **Hộp thư chờ duyệt (Pending Inbox):**
+   - Các giao dịch mới xuất hiện trong Hộp thư để người dùng xác nhận nhanh hoặc điều chỉnh danh mục chỉ với một chạm.
+   - Hỗ trợ nút **"Dán Email/SMS"** để phân tích nhanh giao dịch khi người dùng copy nội dung thủ công.
+4. **Quản lý tài chính toàn diện:**
+   - **Dashboard trực quan:** Thống kê thu nhập, chi tiêu, tổng số dư trong tháng.
+   - **Hạn mức ngân sách:** Cài đặt định mức chi tiêu tháng và theo dõi tỷ lệ đã tiêu dùng.
+   - **Báo cáo & Danh mục:** Phân bổ chi tiêu theo biểu đồ và danh mục tùy biến linh hoạt.
+5. **Bảo mật & Quyền riêng tư:**
+   - Hoàn toàn không gửi dữ liệu giao dịch hay tin nhắn lên bất kỳ máy chủ cloud nào.
+   - Dữ liệu lưu trữ độc lập trong SQLite (`cashflow.db`) trực tiếp trên bộ nhớ thiết bị.
+
+---
+
+## Phiên Bản Android Hỗ Trợ (Android Compatibility)
+
+| Thông số | Giá trị | Ghi chú |
+| :--- | :--- | :--- |
+| **Phiên bản tối thiểu (Min SDK)** | **Android 7.0 (API Level 24)** | Tương thích hầu hết các thiết bị Android phổ biến hiện nay |
+| **Phiên bản mục tiêu (Target SDK)** | **Android 15 / 16 (API Level 36)** | Tối ưu hóa hiệu năng, bảo mật và tương thích các bản Android mới nhất |
+| **Giao diện tùy biến hỗ trợ** | Xiaomi HyperOS/MIUI, Samsung One UI, Oppo ColorOS, Vivo OriginOS, Google Pixel UI... | Cần bật quyền "Truy cập thông báo" (Notification Access) trong Cài đặt hệ thống |
+
+---
+
+## Kiến Trúc Công Nghệ (Tech Stack)
+
+* **UI Framework:** [Flet](https://flet.dev/) (Nền tảng Flutter engine mang lại giao diện mượt mà 60/120fps, Dark theme hiện đại).
+* **Core Runtime:** Python 3.11 nhúng qua [Serious Python](https://github.com/flet-dev/serious-python).
+* **Native Android Layer:** Kotlin Service (`BankNotificationListener.kt`) kế thừa `NotificationListenerService` của Android Framework.
+* **Database:** SQLite3 (Cục bộ, không phụ thuộc mạng).
+* **Kiến trúc luồng sự kiện:** Reactive EventBus hỗ trợ cập nhật dữ liệu thời gian thực giữa background worker và giao diện người dùng.
+
+---
+
+## Cấu Trúc Thư Mục Dự Án (Project Structure)
+
+```text
+FinancialTracking/
+├── apps/
+│   ├── core/                  # Cấu hình hệ thống, Theme, EventBus
+│   ├── database/              # SQLite Database, Connection pool, Repositories
+│   ├── models/                # Data models (Transaction, Category, Notification)
+│   ├── services/              # Notification Listener Service, Regex Parser
+│   ├── ui/                    # Giao diện Flet
+│   │   ├── components/        # Các component dùng chung (Cards, Modals, Banners)
+│   │   └── views/             # Các màn hình chính (Dashboard, Transactions, Inbox, Reports)
+│   ├── template/              # Template mã nguồn Native Android (Kotlin, Manifest, Drawables)
+│   ├── scripts/               # Bộ script tự động build và cài đặt
+│   │   ├── build.sh           # Script đóng gói APK hoàn chỉnh
+│   │   └── install.sh         # Script cài đặt APK trực tiếp qua ADB
+│   └── main.py                # Điểm khởi chạy chính của ứng dụng
+├── README.md                  # Tài liệu tổng quan dự án
+└── pyproject.toml             # Quản lý dependencies
 ```
 
 ---
 
-## 3. Mã Nguồn Kotlin Lắng Nghe Thông Báo (`BankNotificationService.kt`)
+## Hướng Dẫn Cài Đặt & Đóng Gói (Build & Installation)
 
-```kotlin
-package com.cashflowtracking.app
-
-import android.service.notification.NotificationListenerService
-import android.service.notification.StatusBarNotification
-import android.util.Log
-
-class BankNotificationService : NotificationListenerService() {
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        super.onNotificationPosted(sbn)
-        if (sbn == null) return
-
-        val packageName = sbn.packageName ?: return
-        val extras = sbn.notification.extras ?: return
-        val title = extras.getString("android.title") ?: ""
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
-
-        // Danh sách package các app ngân hàng & ví điện tử phổ biến
-        val bankPackages = listOf(
-            "com.vnpay.sacombank",        // Sacombank Pay
-            "com.cake.bank",              // Cake by VPBank
-            "com.mservice.momopay",       // MoMo
-            "com.mservice.momotransfer",  // MoMo
-            "com.VCB",                    // Vietcombank
-            "com.mbmobile",               // MB Bank
-            "vn.com.techcombank.bb.app",  // Techcombank
-            "com.tpb.mb.gprsandroid",     // TPBank
-            "com.vnpay.bidv",             // BIDV
-            "vn.com.vng.zalopay"          // ZaloPay
-        )
-
-        if (bankPackages.any { packageName.contains(it, ignoreCase = true) }) {
-            Log.d("CashflowTracking", "Bắt được thông báo ngân hàng từ $packageName: $title - $text")
-            // Gửi message qua Event / BroadcastReceiver / Ghi trực tiếp vào SQLite finance.db
-        }
-    }
-
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        super.onNotificationRemoved(sbn)
-    }
-}
-```
-
----
-
-## 4. Lệnh Đóng Gói APK với Flet
-
-Cài đặt Flet CLI và Flutter SDK (máy bạn đã có sẵn Flutter 3.44):
-
+### 1. Cài đặt trực tiếp file APK
+File APK sau khi build nằm tại:
 ```bash
-# Di chuyển vào thư mục apps
-cd apps
-
-# Build file APK Release cho Android
-flet build apk --project "CashflowTracking" --org "com.cashflowtracking"
+apps/build/apk/CashflowTracking.apk
 ```
-File APK xuất ra sẽ nằm tại thư mục `build/apk/`.
+Bạn có thể copy file này vào điện thoại để cài đặt hoặc sử dụng lệnh cài tự động qua ADB:
+```bash
+bash apps/scripts/install.sh
+```
+
+### 2. Tự đóng gói (Build from Source)
+Yêu cầu môi trường đã cài đặt:
+- Flutter SDK (hỗ trợ Android)
+- Android SDK (API Level 34+)
+- Python 3.10+ cùng môi trường ảo `.venv` trong thư mục `apps/`
+
+Thực hiện lệnh:
+```bash
+bash apps/scripts/build.sh
+```
+Script sẽ tự động:
+1. Đồng bộ code native Kotlin (`BankNotificationListener.kt`, icon, styles) vào dự án Flutter.
+2. Đóng gói mã nguồn Python và assets.
+3. Chạy Gradle để xuất ra file APK Release hoàn chỉnh tại `apps/build/apk/CashflowTracking.apk`.
+
+---
+
+## Thiết Lập Sau Khi Cài Đặt Lần Đầu
+
+Để ứng dụng có thể bắt thông báo tự động, bạn cần cấp quyền lắng nghe thông báo trên điện thoại:
+1. Mở ứng dụng **CashflowTracking**.
+2. Trên banner thông báo quyền, bấm **"Cấp quyền ngay"** (hoặc vào **Cài đặt máy** $\rightarrow$ **Ứng dụng** $\rightarrow$ **Quyền truy cập đặc biệt** $\rightarrow$ **Quyền truy cập thông báo**).
+3. Bật cho phép **CashflowTracking**.
+4. *(Tùy chọn đối với Xiaomi/Oppo/Vivo)*: Bật quyền **Tự khởi chạy (Autostart)** và chuyển cấu hình tiết kiệm pin sang **Không hạn chế (No restrictions)** để ứng dụng không bị hệ thống tắt khi chạy nền.
