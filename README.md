@@ -1,110 +1,91 @@
-# MoneyOwl - Ứng Dụng Quản Lý Tài Chính Cá Nhân
+# Hướng dẫn Tích hợp Android Notification Listener cho CashflowTracking Flet Mobile
 
-Ứng dụng desktop giúp quản lý tài chính cá nhân được xây dựng bằng WPF, SQLite và Dapper, theo mô hình thiết kế MVVM.
+Tài liệu này hướng dẫn cách cấu hình và đóng gói ứng dụng **CashflowTracking Flet Mobile** thành file APK Android hoàn chỉnh, có khả năng tự động bắt thông báo biến động số dư từ các ứng dụng ngân hàng tại Việt Nam (Sacombank Pay, Cake Bank, MoMo, Vietcombank, MB Bank, Techcombank, TPBank...).
 
-## Tổng Quan
+---
 
-Ứng dụng này giúp người dùng quản lý tài chính cá nhân bằng cách theo dõi thu nhập, chi tiêu và cung cấp báo cáo tài chính chi tiết kèm biểu đồ trực quan. Giao diện hiện đại và cung cấp các công cụ quản lý tài chính toàn diện.
+## 1. Cơ Chế Hoạt Động Trên Android
 
-## Công Nghệ Sử Dụng
+1. **Quyền hệ thống**: Android yêu cầu quyền `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE` để đọc thanh thông báo của hệ thống.
+2. **Cấp quyền từ người dùng**: Khi cài đặt app lần đầu, người dùng vào **Cài đặt điện thoại** $\rightarrow$ **Ứng dụng** $\rightarrow$ **Quyền truy cập đặc biệt** $\rightarrow$ **Quyền truy cập thông báo (Notification Access)** $\rightarrow$ Bật cho phép **CashflowTracking**.
+3. **Bóc tách thông báo**: `NotificationListenerService` nhận chuỗi thông báo $\rightarrow$ chuyển đến `BankNotificationParser` $\rightarrow$ tự động nhận diện Số tiền, Thu (+)/Chi (-), Ngân hàng, Nội dung $\rightarrow$ Lưu vào bảng `bank_notifications` để người dùng xác nhận hoặc tự động ghi sổ.
 
--   **Nền tảng**: C# (.NET 8)
--   **Giao diện**: WPF (Windows Presentation Foundation)
--   **Kiến trúc**: MVVM (Model-View-ViewModel)
--   **Cơ sở dữ liệu**: SQLite
--   **ORM**: Dapper
--   **Thư viện bổ sung**:
-    -   Microsoft.Extensions.DependencyInjection - Quản lý các dependency
-    -   OxyPlot - Vẽ biểu đồ
-    -   Newtonsoft.Json - Xử lý JSON
-    -   ClosedXML - Xuất file Excel
+---
 
-## Tính Năng
+## 2. Cấu hình Android Manifest (`AndroidManifest.xml`)
 
-### 1. Quản Lý Thu Nhập
+Thêm Service vào bên trong thẻ `<application>`:
 
--   Thêm, sửa, xóa các khoản thu nhập
--   Phân loại nguồn thu (lương, đầu tư, thưởng, v.v.)
--   Tính tổng thu nhập theo tháng và năm
-
-### 2. Quản Lý Chi Tiêu
-
--   Thêm, sửa, xóa các khoản chi tiêu
--   Phân loại chi tiêu (ăn uống, đi lại, giải trí, v.v.)
--   Theo dõi chi tiêu theo ngày, tháng và năm
-
-### 3. Quản Lý Số Dư
-
--   Tự động tính toán số dư dựa trên thu nhập và chi tiêu
--   Cảnh báo khi số dư thấp
--   Cập nhật số dư tự động 
-
-### 4. Báo Cáo và Phân Tích
-
--   Biểu đồ tròn thể hiện tỷ lệ chi tiêu theo danh mục
--   Biểu đồ cột so sánh thu nhập và chi tiêu theo tháng
--   Lọc báo cáo theo khoảng thời gian
--   Xuất báo cáo ra Excel
-
-### 5. Quản Lý Danh Mục
-
--   Tạo, sửa và xóa danh mục tùy chỉnh
--   Phân biệt danh mục thu nhập và chi tiêu
--   Lưu trữ danh mục trong cơ sở dữ liệu
-
-## Cài Đặt
-
-1. Đảm bảo đã cài đặt .NET 8 SDK
-2. Clone repository về máy
-3. Di chuyển vào thư mục dự án
-4. Chạy các lệnh sau:
-
-```bash
-dotnet restore
-dotnet build
-dotnet run
+```xml
+<service
+    android:name=".BankNotificationService"
+    android:label="CashflowTracking Notification Listener"
+    android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+    </intent-filter>
+</service>
 ```
 
-2. Hoặc đi đến đường link sau để cài file exe: [**Tải xuống tại đây**](https://github.com/dinhnguyen888/PersonalFinanceManagement/releases/tag/v1.0.0)
+---
 
-## Cấu Trúc Dự Án
+## 3. Mã Nguồn Kotlin Lắng Nghe Thông Báo (`BankNotificationService.kt`)
 
--   `Models/` - Các model dữ liệu
--   `ViewModels/` - ViewModel và các command MVVM
--   `Views/` - Giao diện WPF
--   `Data/` - Context và repository database
--   `Services/` - Các service của ứng dụng
--   `Themes/` - Giao diện và style
--   `Converters/` - Chuyển đổi giá trị WPF
+```kotlin
+package com.cashflowtracking.app
 
-## Kiến Trúc
+import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
+import android.util.Log
 
-Ứng dụng tuân theo mô hình MVVM:
+class BankNotificationService : NotificationListenerService() {
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        super.onNotificationPosted(sbn)
+        if (sbn == null) return
 
--   **Models**: Định nghĩa cấu trúc dữ liệu (Transaction, Category, v.v.)
--   **ViewModels**: Xử lý logic nghiệp vụ và quản lý trạng thái
--   **Views**: Định nghĩa giao diện bằng XAML
--   **Repositories**: Xử lý truy cập dữ liệu qua Dapper
--   **Services**: Cung cấp các chức năng xuyên suốt ứng dụng
+        val packageName = sbn.packageName ?: return
+        val extras = sbn.notification.extras ?: return
+        val title = extras.getString("android.title") ?: ""
+        val text = extras.getCharSequence("android.text")?.toString() ?: ""
 
-## Thiết Kế Cơ Sở Dữ Liệu
+        // Danh sách package các app ngân hàng & ví điện tử phổ biến
+        val bankPackages = listOf(
+            "com.vnpay.sacombank",        // Sacombank Pay
+            "com.cake.bank",              // Cake by VPBank
+            "com.mservice.momopay",       // MoMo
+            "com.mservice.momotransfer",  // MoMo
+            "com.VCB",                    // Vietcombank
+            "com.mbmobile",               // MB Bank
+            "vn.com.techcombank.bb.app",  // Techcombank
+            "com.tpb.mb.gprsandroid",     // TPBank
+            "com.vnpay.bidv",             // BIDV
+            "vn.com.vng.zalopay"          // ZaloPay
+        )
 
-Các entity chính:
+        if (bankPackages.any { packageName.contains(it, ignoreCase = true) }) {
+            Log.d("CashflowTracking", "Bắt được thông báo ngân hàng từ $packageName: $title - $text")
+            // Gửi message qua Event / BroadcastReceiver / Ghi trực tiếp vào SQLite finance.db
+        }
+    }
 
--   `Income`: Quản lý giao dịch thu nhập
--   `Expense`: Quản lý giao dịch chi tiêu
--   `Category`: Quản lý danh mục giao dịch
--   `Report`: Tạo báo cáo tài chính
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+    }
+}
+```
 
-## Phát Triển Tương Lai
+---
 
--   Hỗ trợ nhiều người dùng
--   Đồng bộ hóa đám mây
--   Ứng dụng di động đi kèm
--   Tính năng lập kế hoạch ngân sách
--   Tích hợp API
--   Sao lưu/khôi phục dữ liệu
+## 4. Lệnh Đóng Gói APK với Flet
 
-## Bản Quyền
+Cài đặt Flet CLI và Flutter SDK (máy bạn đã có sẵn Flutter 3.44):
 
-Đã đăng ký bản quyền. Chỉ sử dụng cho mục đích cá nhân.
+```bash
+# Di chuyển vào thư mục apps
+cd apps
+
+# Build file APK Release cho Android
+flet build apk --project "CashflowTracking" --org "com.cashflowtracking"
+```
+File APK xuất ra sẽ nằm tại thư mục `build/apk/`.

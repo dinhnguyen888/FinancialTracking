@@ -1,0 +1,35 @@
+[project]
+name = "flet-bank-notification-listener"
+version = "0.1.0"
+description = "FletBankNotificationListener control for Flet"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Flet contributors", email = "you@example.com" }
+]
+dependencies = [
+    "flet>=1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]"
+]
+
+[project.urls]
+Homepage = "https://mydomain.dev"
+Documentation = "https://github.com/MyGithubAccount/flet-bank-notification-listener"
+Repository = "https://github.com/MyGithubAccount/flet-bank-notification-listener"
+Issues = "https://github.com/MyGithubAccount/flet-bank-notification-listener/issues"
+
+[tool.setuptools.package-data]
+"flutter.flet_bank_notification_listener" = ["**/*"]
+
+[tool.setuptools]
+license-files = []
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

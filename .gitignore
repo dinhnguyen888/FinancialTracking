@@ -360,5 +360,15 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
-FodyWeavers.xsd
 /PersonalFinanceManagement/Output/Setup_PersonalFinance.exe
+
+# Flet mobile build & virtual environment
+apps/build/
+apps/.venv/
+apps/dist/
+apps/*.db
+apps/data/
+*.egg-info/
+dist/
+build/
+

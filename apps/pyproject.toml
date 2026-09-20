@@ -1,0 +1,19 @@
+[project]
+name = "CashflowTracking"
+version = "1.0.0"
+description = "CashflowTracking Mobile App"
+dependencies = [
+    "flet>=1.0.0",
+    "flet-charts>=1.0.0",
+    "openpyxl>=3.1.5"
+]
+
+[tool.flet.app]
+exclude = [
+    ".venv",
+    "build",
+    "extensions",
+    "tests",
+    "__pycache__",
+    "*.pyc"
+]

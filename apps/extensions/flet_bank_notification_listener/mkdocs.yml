@@ -1,0 +1,7 @@
+site_name: FletBankNotificationListener
+
+theme:
+  name: "material"
+
+plugins:
+  - mkdocstrings
