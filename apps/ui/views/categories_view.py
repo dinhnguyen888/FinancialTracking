@@ -252,13 +252,19 @@ class CategoriesView(ft.Container):
             ],
             bgcolor=AppColors.BG_DARK,
         )
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        if hasattr(self.page, "show_dialog"):
+            self.page.show_dialog(dialog)
+        else:
+            self.page.overlay.append(dialog)
+            dialog.open = True
+            self.page.update()
 
     def _close_dialog(self, dialog):
-        dialog.open = False
-        self.page.update()
+        if hasattr(self.page, "pop_dialog"):
+            self.page.pop_dialog()
+        else:
+            dialog.open = False
+            self.page.update()
 
     def _delete_category(self, cat: Category):
         self.cat_repo.delete(cat.id)

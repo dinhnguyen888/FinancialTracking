@@ -160,7 +160,7 @@ class MonthlyBudgetCard(ft.Container):
             focused_border_color=AppColors.PRIMARY_LIGHT,
             color=AppColors.TEXT_PRIMARY,
             autofocus=True,
-            suffix_text="₫",
+            suffix=ft.Text("₫", color=AppColors.TEXT_MUTED),
         )
 
         def set_preset(amount: float):
@@ -176,7 +176,11 @@ class MonthlyBudgetCard(ft.Container):
                     if self.on_budget_changed:
                         self.on_budget_changed()
                     EventBus.publish(EVENT_TRANSACTION_UPDATED)
-                    dialog.open = False
+                    if hasattr(self.page, "pop_dialog"):
+                        self.page.pop_dialog()
+                    else:
+                        dialog.open = False
+                        self.page.update()
                     self.page.overlay.append(
                         ft.SnackBar(
                             content=ft.Text(f"Đã cập nhật định mức chi tiêu: {format_currency(val)}"),
@@ -190,8 +194,11 @@ class MonthlyBudgetCard(ft.Container):
                 self.page.update()
 
         def close_dialog(ev):
-            dialog.open = False
-            self.page.update()
+            if hasattr(self.page, "pop_dialog"):
+                self.page.pop_dialog()
+            else:
+                dialog.open = False
+                self.page.update()
 
         dialog = ft.AlertDialog(
             title=ft.Row(
@@ -203,7 +210,7 @@ class MonthlyBudgetCard(ft.Container):
             ),
             content=ft.Container(
                 content=ft.Column(
-                    main_axis_size=ft.MainAxisSize.MIN,
+                    tight=True,
                     spacing=14,
                     controls=[
                         ft.Text(
@@ -217,10 +224,10 @@ class MonthlyBudgetCard(ft.Container):
                             spacing=6,
                             wrap=True,
                             controls=[
-                                ft.ActionChip(label=ft.Text("5 triệu", size=11), on_click=lambda _: set_preset(5000000)),
-                                ft.ActionChip(label=ft.Text("10 triệu", size=11), on_click=lambda _: set_preset(10000000)),
-                                ft.ActionChip(label=ft.Text("15 triệu", size=11), on_click=lambda _: set_preset(15000000)),
-                                ft.ActionChip(label=ft.Text("20 triệu", size=11), on_click=lambda _: set_preset(20000000)),
+                                ft.Chip(label=ft.Text("5 triệu", size=11), on_click=lambda _: set_preset(5000000)),
+                                ft.Chip(label=ft.Text("10 triệu", size=11), on_click=lambda _: set_preset(10000000)),
+                                ft.Chip(label=ft.Text("15 triệu", size=11), on_click=lambda _: set_preset(15000000)),
+                                ft.Chip(label=ft.Text("20 triệu", size=11), on_click=lambda _: set_preset(20000000)),
                             ]
                         )
                     ]
@@ -238,6 +245,9 @@ class MonthlyBudgetCard(ft.Container):
             bgcolor=AppColors.BG_DARK,
         )
 
-        self.page.overlay.append(dialog)
-        dialog.open = True
-        self.page.update()
+        if hasattr(self.page, "show_dialog"):
+            self.page.show_dialog(dialog)
+        else:
+            self.page.overlay.append(dialog)
+            dialog.open = True
+            self.page.update()
